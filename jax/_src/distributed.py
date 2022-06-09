@@ -24,6 +24,8 @@ from jax._src.config import config
 from jax._src.lib import xla_bridge
 from jax._src.lib import xla_client
 from jax._src.lib import xla_extension
+from jax.experimental.preemption_sync import preemption_sync_manager
+
 
 class State:
   service: Optional[Any] = None
@@ -80,6 +82,9 @@ class State:
           coordinator_address, process_id)
     logging.info('Connecting to JAX distributed service on %s', coordinator_address)
     self.client.connect()
+
+    if xla_client._version >= 73 and config.jax_preemption_checkpoint:
+      preemption_sync_manager.initialize()
 
   def shutdown(self):
     if self.client:

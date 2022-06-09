@@ -864,6 +864,12 @@ config.define_bool_state(
     )
 )
 
+config.define_bool_state(
+    name='jax_preemption_checkpoint',
+    default=False,
+    help='Enable multiple hosts to agree on a checkpoint step when one of the '
+         'hosts receives a preemption notice.')
+
 @contextlib.contextmanager
 def explicit_device_put_scope() -> Iterator[None]:
   """Indicates that the current context is an explicit device_put*() call."""
