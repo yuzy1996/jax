@@ -986,6 +986,51 @@ possibly behave differently, performance-wise or even numerically,
 than either the TensorFlow native or JAX native batch normalization.
 A similar example is that of an LSTM cell.
 
+
+### tf.Module magic conversion during variable assignment
+
+tf.Module will automatically wrap the standard python data types into trackable 
+classes. It is for model saving and loading 
+support purpose.
+Python Dict/List/Dict change to 
+_DictWrapper/_ListWrapper/_TupleWrapper classes.
+At most situation, Wrapper classes 's behaviours work exactly as the standard python data types.
+So this conversion is transparent to the end user.
+
+However, the low level pytree data structure are different.  this sample code can help you
+have a better undestanding about this problem
+
+```python
+import tensorflow as tf
+import copy
+input_data = {'a': {'b': [1,2, 3, 4, 5]}}
+
+print(f"before tf.Module assignment: input_data ={input_data}")
+m = tf.Module()
+m.input_data = copy.deepcopy(input_data)
+print(f"after tf.Module assignment: input_data ={m.input_data}")
+```
+
+From the output, you can see the difference.
+
+```
+before tf.Module assignment: input_data ={'a': {'b': [1, 2, 3, 4, 5]}}
+after tf.Module assignment: input_data ={'a': DictWrapper({'b': ListWrapper([1, 2, 3, 4, 5])})}
+```
+
+In some situtations, the user will run into errors. For example ```pjit``` request 
+the input data and p_spec have same pytree data structure. 
+This magic conversion will trigger runtime error.
+
+```python
+m = tf.Module()
+m.attr = copy.deepcopy(orig_attr)
+result = pjit.pjit(jax_func, in_axis_resources=(p_spec,),
+                  out_axis_resources=None)(m.attr)
+```
+
+If you run into such errors, the walkaround is that you always use the orig_attr in JAX code.
+
 # Calling TensorFlow functions from JAX
 
 The function ```call_tf``` allows JAX functions to call
