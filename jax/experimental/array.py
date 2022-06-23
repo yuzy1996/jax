@@ -18,8 +18,10 @@ import numpy as np
 from typing import Sequence, Tuple, Callable, Union, Optional, cast, List
 
 from jax import core
+from jax._src import dispatch
 from jax._src.config import config
 from jax._src.util import prod
+from jax._src.lib import xla_bridge as xb
 from jax._src.lib import xla_client as xc
 from jax._src.api import device_put
 from jax.interpreters import pxla, xla
@@ -236,6 +238,13 @@ def make_array_from_callback(shape: Shape, sharding: Sharding,
 core.pytype_aval_mappings[Array] = lambda x: core.ShapedArray(x.shape, x.dtype)
 xla.pytype_aval_mappings[Array] = lambda x: core.ShapedArray(x.shape, x.dtype)
 xla.canonicalize_dtype_handlers[Array] = pxla.identity
+
+
+def _device_put_array(x, device: Optional[Device]):
+  x = dispatch._copy_device_array_to_device(pxla._set_aval(x._arrays[0]), device)
+  return (x,)
+dispatch.device_put_handlers[Array] = _device_put_array
+
 
 def _array_shard_arg(x, devices, indices):
   return x._arrays
